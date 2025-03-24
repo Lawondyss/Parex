@@ -1,0 +1,37 @@
+{
+  "name": "lawondyss/parex",
+  "description": "Lightweight PHP library for parsing terminal commands using PHP native options processing",
+  "type": "library",
+  "version": "1.0.0",
+  "keywords": [
+    "php",
+    "cli",
+    "terminal",
+    "command-parser",
+    "shell"
+  ],
+  "authors": [
+    {
+      "name": "Ladislav Vondráček",
+      "email": "lad.von@gmail.com",
+      "homepage": "https://www.lawondyss.cz"
+    }
+  ],
+  "license": "MIT",
+  "require": {
+    "php": "^8.1"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.1",
+    "friendsofphp/php-cs-fixer": "3.69"
+  },
+  "autoload": {
+    "psr-4": {
+      "Lawondyss\\Parex\\": "src/"
+    }
+  },
+  "scripts": {
+    "phpstan": "phpstan analyse -l 5 src/",
+    "phpcsfix": "PHP_CS_FIXER_IGNORE_ENV=1 php-cs-fixer fix --allow-risky yes"
+  }
+}
