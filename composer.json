@@ -2,7 +2,7 @@
   "name": "lawondyss/parex",
   "description": "Lightweight PHP library for parsing terminal commands using PHP native options processing",
   "type": "library",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "keywords": [
     "php",
     "cli",

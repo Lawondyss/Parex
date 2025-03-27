@@ -26,11 +26,99 @@ access the parsed values through a result object.
 
 ### Basic example (DynamicResult)
 
-See [simple.php](./examples/simple.php) example with dynamic result for command arguments.
+Basic definition:
+
+```php
+$dynamicResult = (new Parex())
+    ->addRequire(name: 'env', short: 'e')
+    ->addOptional(name: 'scopes', short: 's', multiple: true)
+    ->addOptional(name: 'currency', default: 'CZK')
+    ->addOptional(name: 'onlyAccount')
+    ->addFlag(name: 'sandbox')
+    ->parse();
+```
+Command: `php examples/simple.php -e "./.env" --sandbox --scopes=last:month --env="../.env" -s="last:week" -stoday`
+
+Dump:
+```
+Lawondyss\Parex\Result\DynamicResult
+    env: './.env'
+    scopes: array (3)
+       0 => 'last:month'
+       1 => 'last:week'
+       2 => 'today'
+    currency: 'CZK'
+    onlyAccount: null
+    sandbox: true
+    POSITIONAL: array (0)
+```
+
+Try [simple.php](./examples/simple.php) example with dynamic result for command arguments.
 
 ### Advanced example (TypedResult)
 
-See the example [typed.php](./examples/typed.php), which shows how to use Parex with a statically defined result class (`ScriptResult`) and enums.
+Definition with own class of result.
+```php
+$scriptResult = (new Parex())
+    ->addRequire('env', 'e')
+    ->addOptional('scopes', 's', multiple: true)
+    ->addOptional('currency', default: 'CZK')
+    ->addOptional('onlyAccount')
+    ->addFlag('sandbox')
+    ->parse(ScriptResult::class);
+```
+Command: `php examples/typed.php -e "./.env" --sandbox --scopes=last:month --env="../.env" -s="last:week" -stoday`
+
+Dump:
+```
+ScriptResult
+    env: SplFileInfo
+       path: './.env'
+    scopes: array (3)
+       0 => Scope::LastMonth
+          value: 'last:month'
+       1 => Scope::LastWeek
+          value: 'last:week'
+       2 => Scope::Today
+          value: 'today'
+    currency: Currency::CZK
+       value: 'CZK'
+    onlyAccount: null
+    sandbox: true
+```
+
+Try the example [typed.php](./examples/typed.php), which shows how to define own result class (`ScriptResult`) with types and enums.
+
+### ArgvParser
+
+Default GetOptParser does not support positional arguments suitable for custom commands, for example.
+ArgvParser can be used to support this.
+```php
+$dynamicResult = (new Parex(new ArgvParser()))
+    ->addRequire(name: 'env', short: 'e')
+    ->addOptional(name: 'scopes', short: 's', multiple: true)
+    ->addOptional(name: 'currency', default: 'CZK')
+    ->addOptional(name: 'onlyAccount')
+    ->addFlag(name: 'sandbox')
+    ->parse();
+```
+Command: `php examples/argv.php command sub -e "./.env" --sandbox --scopes=last:month --env="../.env" -s="last:week" -stoday`
+
+Dump: 
+```
+Lawondyss\Parex\Result\DynamicResult
+   env: '../.env'
+   scopes: array (3)
+      0 => 'last:month'
+      1 => 'last:week'
+      2 => 'today'
+   currency: null
+   onlyAccount: null
+   sandbox: true
+   POSITIONAL: array (2)
+      0 => 'command'
+      1 => 'sub'
+```
 
 ## Result classes
 
