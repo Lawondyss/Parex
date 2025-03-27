@@ -2,6 +2,8 @@
 
 namespace Lawondyss\Parex;
 
-class ParexException extends \Exception
+use Exception;
+
+class ParexException extends Exception
 {
 }

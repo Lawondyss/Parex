@@ -18,8 +18,9 @@ class Parex
   /** @var Option[] $flags */
   protected array $flags = [];
 
+
   public function __construct(
-    private readonly Parser $parser = new GetOptParser()
+    private readonly Parser $parser = new GetOptParser(),
   ) {
   }
 
