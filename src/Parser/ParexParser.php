@@ -4,8 +4,9 @@ namespace Lawondyss\Parex\Parser;
 
 use Lawondyss\Parex\Option;
 use Lawondyss\Parex\ParexException;
-
+use function array_shift;
 use function implode;
+use function str_starts_with;
 
 abstract class ParexParser implements Parser
 {
@@ -41,10 +42,15 @@ abstract class ParexParser implements Parser
   {
     $missing = [];
     $output = [];
-    $result = $this->fetchArguments($requires, $optionals, $flags);
+    $arguments = $this->fetchArguments($requires, $optionals, $flags);
+
+    // positional arguments
+    while ($arguments[0] ?? false) {
+      $output[] = array_shift($arguments);
+    }
 
     foreach ($requires as $opt) {
-      $value = $this->extractValue($opt, $result);
+      $value = $this->extractValue($opt, $arguments);
 
       if ($value === null) {
         $missing[] = $opt->name;
@@ -57,12 +63,12 @@ abstract class ParexParser implements Parser
     $missing !== [] && throw new ParexException('Missing required option(s): ' . implode(', ', $missing));
 
     foreach ($optionals as $opt) {
-      $value = $this->extractValue($opt, $result);
+      $value = $this->extractValue($opt, $arguments);
       $output[$opt->name] = $value ?? ($opt->asArray ? [] : null);
     }
 
     foreach ($flags as $opt) {
-      $output[$opt->name] = $this->containsFlag($opt, $result);
+      $output[$opt->name] = $this->containsFlag($opt, $arguments);
     }
 
     return $output;
