@@ -3,14 +3,11 @@
 namespace Lawondyss\Parex\Parser;
 
 use Lawondyss\Parex\Option;
-use Lawondyss\Parex\ParexException;
 
-use function array_keys;
 use function array_merge;
 use function array_pop;
 use function array_unique;
 use function getopt;
-use function implode;
 use function is_array;
 
 /**
@@ -20,54 +17,15 @@ use function is_array;
  *
  * @link https://www.php.net/manual/en/function.getopt.php
  */
-class GetOptParser implements Parser
+class GetOptParser extends ParexParser
 {
   /**
    * @param Option[] $requires
    * @param Option[] $optionals
    * @param Option[] $flags
-   * @return array<string, mixed>
-   * @throws ParexException
+   * @return array<array-key, string|string[]>
    */
-  public function parse(array $requires, array $optionals, array $flags): array
-  {
-    $missing = [];
-    $output = [];
-    $result = getopt(...$this->createGetOptArguments($requires, $optionals, $flags));
-
-    foreach ($requires as $opt) {
-      $value = $this->extractValue($opt, $result);
-
-      if ($value === null) {
-        $missing[] = $opt->name;
-        continue;
-      }
-
-      $output[$opt->name] = $value;
-    }
-
-    $missing !== [] && throw new ParexException('Missing required option(s): ' . implode(', ', $missing));
-
-    foreach ($optionals as $opt) {
-      $value = $this->extractValue($opt, $result);
-      $output[$opt->name] = $value ?? ($opt->asArray ? [] : null);
-    }
-
-    foreach ($flags as $opt) {
-      $output[$opt->name] = isset($result[$opt->name]) || isset($result[$opt->short]);
-    }
-
-    return $output;
-  }
-
-
-  /**
-   * @param Option[] $requires
-   * @param Option[] $optionals
-   * @param Option[] $flags
-   * @return array<string|string[]> [string, string[]]
-   */
-  private function createGetOptArguments(array $requires, array $optionals, array $flags): array
+  protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
     $exists = [];
     $longOptions = [];
@@ -94,27 +52,33 @@ class GetOptParser implements Parser
       $append($param, suffix: '');
     }
 
-    return [$shortOptions, $longOptions];
+    return getopt($shortOptions, $longOptions);
   }
 
 
   /**
-   * @param array<string, string|string[]|false> $result
+   * @param array<string, string|string[]|false> $arguments
    */
-  private function extractValue(Option $opt, array $result): mixed
+  protected function extractValue(Option $option, array $arguments): mixed
   {
     // if both variants occur, they must be merged
-    $value = isset($result[$opt->name], $result[$opt->short])
-      ? array_merge((array)$result[$opt->name], (array)$result[$opt->short])
-      : ($result[$opt->name] ?? $result[$opt->short] ?? $opt->default);
+    $value = isset($arguments[$option->name], $arguments[$option->short])
+      ? array_merge((array)$arguments[$option->name], (array)$arguments[$option->short])
+      : ($arguments[$option->name] ?? $arguments[$option->short] ?? $option->default);
 
     is_array($value) && $value = array_unique($value);
 
     // type of value by Option
     return match (true) {
-      $opt->asArray => (array)$value, // must be always an array, NULL as []
+      $option->asArray => (array)$value, // must be always an array, NULL as []
       is_array($value) => array_pop($value), // last_by_short ?? last_by_name ?? last_by_default
       default => $value,
     };
+  }
+
+
+  protected function containsFlag(Option $option, array $arguments): bool
+  {
+    return isset($arguments[$option->name]) || isset($arguments[$option->short]);
   }
 }

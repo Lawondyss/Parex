@@ -3,95 +3,64 @@
 namespace Lawondyss\Parex\Parser;
 
 use Lawondyss\Parex\Option;
-use Lawondyss\Parex\ParexException;
+
 use function array_pop;
 use function array_shift;
 use function explode;
-use function implode;
 use function in_array;
 use function str_contains;
 use function str_starts_with;
 use function substr;
+
 use const PHP_EOL;
 
-class ArgvParser implements Parser
+/**
+ * Parser utilizing arguments from the array $_SERVER['argv'].
+ * A known limitation is that it fails for merged flags (-x -y -z => -xyz); however, this is a parsing issue.
+ * TODO: In the fetchArguments() method, the argument array would need preprocessing for flag decomposition.
+ */
+class ArgvParser extends ParexParser
 {
   /**
    * @inheritDoc
    */
-  public function parse(array $requires, array $optionals, array $flags): array
+  protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
     $input = $_SERVER['argv'];
-    $missing = [];
-    $output = [];
 
     // first is always the script name
     array_shift($input);
 
-    // there is a possibility that the first positions are positional arguments
-    // (commands, mandatory arguments)
-    $idx = 0;
-
-    while (!str_starts_with($input[$idx], '-')) {
-      $output[] = array_shift($input);
-    }
-
-    foreach ($requires as $opt) {
-      $value = $this->extractValue($opt, $input);
-
-      if ($value === null) {
-        $missing[] = $opt->name;
-        continue;
-      }
-
-      $output[$opt->name] = $value;
-    }
-
-    $missing !== [] && throw new ParexException('Missing required option(s): ' . implode(', ', $missing));
-
-    foreach ($optionals as $opt) {
-      $value = $this->extractValue($opt, $input);
-      $output[$opt->name] = $value ?? ($opt->asArray ? [] : null);
-    }
-
-    foreach ($flags as $opt) {
-      $output[$opt->name] = $this->containsFlag($opt, $input);
-    }
-
-    return $output;
+    return $input;
   }
 
 
   /**
-   * @param string[] $input
+   * @inheritDoc
    */
-  private function extractValue(Option $option, array $input): mixed
+  protected function extractValue(Option $option, array $arguments): mixed
   {
-    $count = count($input);
+    $count = count($arguments);
 
     $values = [];
 
     for ($i = 0; $i < $count; $i++) {
-      $arg = $input[$i];
+      $arg = $arguments[$i];
 
       if ($arg[0] !== '-') {
         continue;
       }
 
       if (in_array($arg, ["--{$option->name}", "-{$option->short}"])) {
-        $values[] = $input[++$i];
+        $values[] = $arguments[++$i];
 
       } elseif (str_starts_with($arg, "--{$option->name}=")) {
-        [$_, $value] = explode('=', $arg, limit: 2) + [null, null];
-        $values[] = $value;
+        $values[] = $this->splitValue($arg);
 
       } elseif (isset($option->short) && str_starts_with($arg, "-{$option->short}")) {
-        if (str_contains($arg, '=')) {
-          [$_, $value] = explode('=', $arg, limit: 2) + [null, null];
-          $values[] = $value;
-        } else {
-          $values[] = substr($arg, 2);
-        }
+        $values[] = str_contains($arg, '=')
+          ? $this->splitValue($arg)
+          : substr($arg, offset: 2);
       }
     }
 
@@ -101,10 +70,18 @@ class ArgvParser implements Parser
   }
 
 
-  private function containsFlag(Option $option, array $input): bool
+  protected function containsFlag(Option $option, array $arguments): bool
   {
     $short = $option->short ?? PHP_EOL;
 
-    return in_array("--{$option->name}", $input) || in_array("-{$short}", $input);
+    return in_array("--{$option->name}", $arguments) || in_array("-{$short}", $arguments);
+  }
+
+
+  private function splitValue(string $s): ?string
+  {
+    [$_, $value] = explode('=', $s, limit: 2) + [null, null];
+
+    return $value;
   }
 }
