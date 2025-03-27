@@ -64,7 +64,7 @@ try {
     ->addFlag('sandbox')
     ->parse(ScriptResult::class);
 
-  var_dump($result);
+  dump($result);
 
 } catch (ParexException $exc) {
   echo "\n[ERROR] {$exc->getMessage()}\n";

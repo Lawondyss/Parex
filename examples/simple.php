@@ -16,7 +16,7 @@ try {
     ->addFlag(name: 'sandbox')
     ->parse();
 
-  var_dump($result);
+  dump($result);
 
 } catch (ParexException $exc) {
   echo "\n[ERROR] {$exc->getMessage()}\n";
