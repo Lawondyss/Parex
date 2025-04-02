@@ -91,8 +91,8 @@ Try the example [typed.php](./examples/typed.php), which shows how to define own
 
 ### ArgvParser
 
-Default GetOptParser does not support positional arguments suitable for custom commands, for example.
-ArgvParser can be used to support this.
+Default GetOptParser does not support positional arguments suitable for custom commands and ignores unknown options.
+ArgvParser can be used to support these things.
 ```php
 $dynamicResult = (new Parex(new ArgvParser()))
     ->addRequire(name: 'env', short: 'e')

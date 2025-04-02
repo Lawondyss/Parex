@@ -4,9 +4,10 @@ namespace Lawondyss\Parex\Parser;
 
 use Lawondyss\Parex\Option;
 use Lawondyss\Parex\ParexException;
+
+use function array_keys;
 use function array_shift;
 use function implode;
-use function str_starts_with;
 
 abstract class ParexParser implements Parser
 {
@@ -22,13 +23,13 @@ abstract class ParexParser implements Parser
   /**
    * @param array<array-key, mixed> $arguments
    */
-  abstract protected function extractValue(Option $option, array $arguments): mixed;
+  abstract protected function extractValue(Option $option, array &$arguments): mixed;
 
 
   /**
    * @param array<array-key, mixed> $arguments
    */
-  abstract protected function containsFlag(Option $option, array $arguments): bool;
+  abstract protected function containsFlag(Option $option, array &$arguments): bool;
 
 
   /**
@@ -45,7 +46,7 @@ abstract class ParexParser implements Parser
     $arguments = $this->fetchArguments($requires, $optionals, $flags);
 
     // positional arguments
-    while ($arguments[0] ?? false) {
+    while (($arguments[0] ?? false) && $arguments[0][0] !== '-') {
       $output[] = array_shift($arguments);
     }
 
@@ -53,7 +54,7 @@ abstract class ParexParser implements Parser
       $value = $this->extractValue($opt, $arguments);
 
       if ($value === null) {
-        $missing[] = $opt->name;
+        $missing[] = "--{$opt->name}" . ($opt->short ? "/-{$opt->short}" : '');
         continue;
       }
 
@@ -70,6 +71,8 @@ abstract class ParexParser implements Parser
     foreach ($flags as $opt) {
       $output[$opt->name] = $this->containsFlag($opt, $arguments);
     }
+
+    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', $arguments));
 
     return $output;
   }

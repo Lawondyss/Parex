@@ -5,6 +5,7 @@ namespace Lawondyss\Parex\Parser;
 use Lawondyss\Parex\Option;
 
 use function array_pop;
+use function array_search;
 use function array_shift;
 use function explode;
 use function in_array;
@@ -38,10 +39,11 @@ class ArgvParser extends ParexParser
   /**
    * @inheritDoc
    */
-  protected function extractValue(Option $option, array $arguments): mixed
+  protected function extractValue(Option $option, array &$arguments): mixed
   {
     $count = count($arguments);
 
+    $usedIndexes = [];
     $values = [];
 
     for ($i = 0; $i < $count; $i++) {
@@ -52,17 +54,29 @@ class ArgvParser extends ParexParser
       }
 
       if (in_array($arg, ["--{$option->name}", "-{$option->short}"])) {
+        $usedIndexes[] = $i;
         $values[] = $arguments[++$i];
+        $usedIndexes[] = $i;
+
 
       } elseif (str_starts_with($arg, "--{$option->name}=")) {
+        $usedIndexes[] = $i;
         $values[] = $this->splitValue($arg);
 
       } elseif (isset($option->short) && str_starts_with($arg, "-{$option->short}")) {
+        $usedIndexes[] = $i;
         $values[] = str_contains($arg, '=')
           ? $this->splitValue($arg)
           : substr($arg, offset: 2);
       }
     }
+
+    // remove used arguments
+    foreach ($usedIndexes as $i) {
+      unset($arguments[$i]);
+      $arguments = array_values($arguments);
+    }
+
 
     return $option->asArray
       ? $values
@@ -70,11 +84,23 @@ class ArgvParser extends ParexParser
   }
 
 
-  protected function containsFlag(Option $option, array $arguments): bool
+  protected function containsFlag(Option $option, array &$arguments): bool
   {
     $short = $option->short ?? PHP_EOL;
 
-    return in_array("--{$option->name}", $arguments) || in_array("-{$short}", $arguments);
+    $byName = array_search("--{$option->name}", $arguments, strict: true);
+    $byShort = array_search("-{$short}", $arguments, strict: true);
+
+    // remove used arguments
+    if (is_int($byName)) {
+      unset($arguments[$byName]);
+    }
+
+    if (is_int($byShort)) {
+      unset($arguments[$byShort]);
+    }
+
+    return is_int($byName) || is_int($byShort);
   }
 
 

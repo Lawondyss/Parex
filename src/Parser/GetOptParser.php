@@ -12,7 +12,7 @@ use function is_array;
 
 /**
  * Parser using native function getopt() to parse CLI arguments.
- * A known limitation is failing for positional arguments at the beginning of a terminal command.
+ * A known limitations is failing for positional arguments at the beginning of the command and ignores unknown options.
  * Use only for dash and double dash options (-x and --xxx).
  *
  * @link https://www.php.net/manual/en/function.getopt.php
@@ -59,12 +59,15 @@ class GetOptParser extends ParexParser
   /**
    * @param array<string, string|string[]|false> $arguments
    */
-  protected function extractValue(Option $option, array $arguments): mixed
+  protected function extractValue(Option $option, array &$arguments): mixed
   {
     // if both variants occur, they must be merged
     $value = isset($arguments[$option->name], $arguments[$option->short])
       ? array_merge((array)$arguments[$option->name], (array)$arguments[$option->short])
       : ($arguments[$option->name] ?? $arguments[$option->short] ?? $option->default);
+
+    // remove used arguments
+    unset($arguments[$option->name], $arguments[$option->short]);
 
     is_array($value) && $value = array_unique($value);
 
@@ -77,8 +80,11 @@ class GetOptParser extends ParexParser
   }
 
 
-  protected function containsFlag(Option $option, array $arguments): bool
+  protected function containsFlag(Option $option, array &$arguments): bool
   {
-    return isset($arguments[$option->name]) || isset($arguments[$option->short]);
+    $contains = isset($arguments[$option->name]) || isset($arguments[$option->short]);
+    unset($arguments[$option->name], $arguments[$option->short]);
+
+    return $contains;
   }
 }
