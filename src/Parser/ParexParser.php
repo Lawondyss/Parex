@@ -65,7 +65,7 @@ abstract class ParexParser implements Parser
 
     foreach ($optionals as $opt) {
       $value = $this->extractValue($opt, $arguments);
-      $output[$opt->name] = $value ?? ($opt->asArray ? [] : null);
+      $output[$opt->name] = $value ?? ($opt->asArray ? (array)$opt->default : $opt->default);
     }
 
     foreach ($flags as $opt) {
