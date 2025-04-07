@@ -8,6 +8,10 @@ use Lawondyss\Parex\ParexException;
 use function array_keys;
 use function array_shift;
 use function implode;
+use function lcfirst;
+use function str_contains;
+use function str_replace;
+use function ucwords;
 
 abstract class ParexParser implements Parser
 {
@@ -66,6 +70,14 @@ abstract class ParexParser implements Parser
     foreach ($optionals as $opt) {
       $value = $this->extractValue($opt, $arguments);
       $output[$opt->name] = $value ?? ($opt->asArray ? (array)$opt->default : $opt->default);
+
+      // For kebab-case key creates key with camelCase format for easier access
+      // $result->kebabCaseName instead of $result->{"kebab-case-name"}
+      if (str_contains($opt->name, '-')) {
+        $name = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $opt->name))));
+        $output[$name] = $output[$opt->name];
+        unset($output[$opt->name]);
+      }
     }
 
     foreach ($flags as $opt) {
