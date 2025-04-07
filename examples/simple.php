@@ -12,8 +12,9 @@ try {
     ->addRequire(name: 'env', short: 'e')
     ->addOptional(name: 'scopes', short: 's', multiple: true)
     ->addOptional(name: 'currency', default: 'CZK')
-    ->addOptional(name: 'onlyAccount')
+    ->addOptional(name: 'only-account')
     ->addFlag(name: 'sandbox')
+    ->addFlag(name: 'dry-run')
     ->parse();
 
   dump($result);

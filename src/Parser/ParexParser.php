@@ -5,6 +5,8 @@ namespace Lawondyss\Parex\Parser;
 use Lawondyss\Parex\Option;
 use Lawondyss\Parex\ParexException;
 
+use function array_diff_key;
+use function array_flip;
 use function array_keys;
 use function array_shift;
 use function implode;
@@ -70,14 +72,6 @@ abstract class ParexParser implements Parser
     foreach ($optionals as $opt) {
       $value = $this->extractValue($opt, $arguments);
       $output[$opt->name] = $value ?? ($opt->asArray ? (array)$opt->default : $opt->default);
-
-      // For kebab-case key creates key with camelCase format for easier access
-      // $result->kebabCaseName instead of $result->{"kebab-case-name"}
-      if (str_contains($opt->name, '-')) {
-        $name = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $opt->name))));
-        $output[$name] = $output[$opt->name];
-        unset($output[$opt->name]);
-      }
     }
 
     foreach ($flags as $opt) {
@@ -86,6 +80,18 @@ abstract class ParexParser implements Parser
 
     $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', $arguments));
 
-    return $output;
+    $oldNames = [];
+
+    foreach ($output as $name => $value) {
+      // For kebab-case key creates key with camelCase format for easier access
+      // $result->kebabCaseName instead of $result->{"kebab-case-name"}
+      if (str_contains($name, '-')) {
+        $oldNames[] = $oldName = $name;
+        $name = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $oldName))));
+        $output[$name] = $output[$oldName];
+      }
+    }
+
+    return array_diff_key($output, array_flip($oldNames));
   }
 }
