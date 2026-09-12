@@ -55,8 +55,11 @@ class ArgvParser extends ParexParser
 
       if (in_array($arg, ["--{$option->name}", "-{$option->short}"])) {
         $usedIndexes[] = $i;
-        $values[] = $arguments[++$i];
-        $usedIndexes[] = $i;
+
+        if (isset($arguments[$i + 1])) {
+          $values[] = $arguments[++$i];
+          $usedIndexes[] = $i;
+        }
 
 
       } elseif (str_starts_with($arg, "--{$option->name}=")) {
@@ -74,8 +77,9 @@ class ArgvParser extends ParexParser
     // remove used arguments
     foreach ($usedIndexes as $i) {
       unset($arguments[$i]);
-      $arguments = array_values($arguments);
     }
+
+    $arguments = array_values($arguments);
 
 
     return $option->asArray
@@ -99,6 +103,8 @@ class ArgvParser extends ParexParser
     if (is_int($byShort)) {
       unset($arguments[$byShort]);
     }
+
+    $arguments = array_values($arguments);
 
     return is_int($byName) || is_int($byShort);
   }
