@@ -42,7 +42,7 @@ abstract class ParexParser implements Parser
    * @param Option[] $requires
    * @param Option[] $optionals
    * @param Option[] $flags
-   * @return array<string, mixed>
+   * @return array<array-key, mixed>
    * @throws ParexException
    */
   public function parse(array $requires, array $optionals, array $flags): array
@@ -52,7 +52,7 @@ abstract class ParexParser implements Parser
     $arguments = $this->fetchArguments($requires, $optionals, $flags);
 
     // positional arguments
-    while (($arguments[0] ?? false) && $arguments[0][0] !== '-') {
+    while (($arguments[0] ?? false) && is_string($arguments[0]) && $arguments[0] !== '' && $arguments[0][0] !== '-') {
       $output[] = array_shift($arguments);
     }
 
@@ -78,14 +78,14 @@ abstract class ParexParser implements Parser
       $output[$opt->name] = $this->containsFlag($opt, $arguments);
     }
 
-    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', $arguments));
+    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', array_map(static fn (mixed $v): string => is_scalar($v) || $v instanceof \Stringable ? (string) $v : '', $arguments)));
 
     $oldNames = [];
 
     foreach ($output as $name => $value) {
       // For kebab-case key creates key with camelCase format for easier access
       // $result->kebabCaseName instead of $result->{"kebab-case-name"}
-      if (str_contains($name, '-')) {
+      if (is_string($name) && str_contains($name, '-')) {
         $oldNames[] = $oldName = $name;
         $name = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $oldName))));
         $output[$name] = $output[$oldName];

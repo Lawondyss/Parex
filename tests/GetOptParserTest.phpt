@@ -18,6 +18,19 @@ require __DIR__ . '/bootstrap.php';
  */
 class GetOptParserTest extends TestCase
 {
+  public function testGetOptParserDefaultsAndFlags(): void
+  {
+    $result = (new Parex(new GetOptParser()))
+      ->addOptional('currency', default: 'CZK')
+      ->addFlag('sandbox')
+      ->parse();
+
+    Assert::type(DynamicResult::class, $result);
+    Assert::same('CZK', $result->currency);
+    Assert::false($result->sandbox);
+  }
+
+
   public function testGetOptParserRequiredMissing(): void
   {
     $_SERVER['argv'] = ['script.php'];

@@ -23,7 +23,7 @@ class GetOptParser extends ParexParser
    * @param Option[] $requires
    * @param Option[] $optionals
    * @param Option[] $flags
-   * @return array<array-key, string|string[]>
+   * @return array<array-key, mixed>
    */
   protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
@@ -52,7 +52,9 @@ class GetOptParser extends ParexParser
       $append($param, suffix: '');
     }
 
-    return getopt($shortOptions, $longOptions);
+    $opts = getopt($shortOptions, $longOptions);
+
+    return $opts !== false ? $opts : [];
   }
 
 
@@ -69,7 +71,10 @@ class GetOptParser extends ParexParser
     // remove used arguments
     unset($arguments[$option->name], $arguments[$option->short]);
 
-    is_array($value) && $value = array_unique($value);
+    if (is_array($value)) {
+      /** @var array<string|int, string> $value */
+      $value = array_values(array_unique(array_map(static fn (mixed $v): string => is_scalar($v) || $v instanceof \Stringable ? (string) $v : '', $value)));
+    }
 
     // type of value by Option
     return match (true) {
