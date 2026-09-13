@@ -97,6 +97,63 @@ class ArgvParserTest extends TestCase
     Assert::same('prod', $result->env);
     Assert::same('ACC123', $result->onlyAccount);
   }
+
+
+  public function testEmptyStringArgument(): void
+  {
+    $_SERVER['argv'] = ['script.php', 'cmd', '', '-e', 'prod'];
+
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->parse();
+
+    Assert::same('prod', $result->env);
+    Assert::same(['cmd', ''], $result->POSITIONAL);
+  }
+
+
+  public function testOptionDoesNotConsumeFlag(): void
+  {
+    $_SERVER['argv'] = ['script.php', '--env', '--sandbox'];
+
+    Assert::exception(
+      static function (): void {
+        (new Parex(new ArgvParser()))
+          ->addRequire('env', 'e')
+          ->addFlag('sandbox')
+          ->parse();
+      },
+      ParexException::class,
+      'Missing required option(s): --env/-e',
+    );
+  }
+
+
+  public function testPositionalArgumentsAfterOptions(): void
+  {
+    $_SERVER['argv'] = ['script.php', '-e', 'prod', 'build'];
+
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->parse();
+
+    Assert::same('prod', $result->env);
+    Assert::same(['build'], $result->POSITIONAL);
+  }
+
+
+  public function testFlagWithoutShortOption(): void
+  {
+    $_SERVER['argv'] = ['script.php', '-e', 'prod', '--sandbox'];
+
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->addFlag('sandbox')
+      ->parse();
+
+    Assert::same('prod', $result->env);
+    Assert::true($result->sandbox);
+  }
 }
 
 (new ArgvParserTest())->run();

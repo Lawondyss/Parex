@@ -6,6 +6,7 @@ namespace Lawondyss\Parex\Tests;
 
 use Lawondyss\Parex\Parex;
 use Lawondyss\Parex\Parser\ArgvParser;
+use Lawondyss\Parex\ParexException;
 use Lawondyss\Parex\Result\DefinedResult;
 use Lawondyss\Parex\Result\DynamicResult;
 use Tester\Assert;
@@ -25,6 +26,33 @@ class SampleResult extends DefinedResult
     $this->env = $env;
     $this->currency = $currency;
     $this->sandbox = $sandbox;
+  }
+}
+
+
+class TypedResultForTest extends DefinedResult
+{
+  public string $env;
+
+
+  public function __construct(string $env)
+  {
+    $this->env = $env;
+  }
+}
+
+
+class TypedResultWithPositionalForTest extends DefinedResult
+{
+  public string $env;
+  /** @var string[] $positional */
+  public array $positional;
+
+
+  public function __construct(string $env, array $positional = [])
+  {
+    $this->env = $env;
+    $this->positional = $positional;
   }
 }
 
@@ -58,6 +86,52 @@ class ParexTest extends TestCase
     Assert::same('prod', $result->env);
     Assert::same('EUR', $result->currency);
     Assert::true($result->sandbox);
+  }
+
+
+  public function testCustomResultWithPositionalArgs(): void
+  {
+    $_SERVER['argv'] = ['script.php', 'build', '-e', 'prod'];
+
+    /** @var TypedResultForTest $result */
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->parse(TypedResultForTest::class);
+
+    Assert::type(TypedResultForTest::class, $result);
+    Assert::same('prod', $result->env);
+  }
+
+
+  public function testCustomResultWithPositionalParameter(): void
+  {
+    $_SERVER['argv'] = ['script.php', 'build', '-e', 'prod'];
+
+    /** @var TypedResultWithPositionalForTest $result */
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->parse(TypedResultWithPositionalForTest::class);
+
+    Assert::type(TypedResultWithPositionalForTest::class, $result);
+    Assert::same('prod', $result->env);
+    Assert::same(['build'], $result->positional);
+  }
+
+
+  public function testKebabCaseCollision(): void
+  {
+    $_SERVER['argv'] = ['script.php', '--my-option=a', '--myOption=b'];
+
+    Assert::exception(
+      static function (): void {
+        (new Parex(new ArgvParser()))
+          ->addRequire('my-option')
+          ->addRequire('myOption')
+          ->parse();
+      },
+      ParexException::class,
+      "Option name collision for 'myOption'",
+    );
   }
 }
 

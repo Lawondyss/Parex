@@ -67,6 +67,17 @@ class ResultTest extends TestCase
       'Setting an undefined option: nonexistent',
     );
   }
+
+
+  public function testIsset(): void
+  {
+    $result = new DynamicResult(env: 'prod', currency: null);
+
+    Assert::true(isset($result->env));
+    Assert::false(isset($result->currency));
+    Assert::false(isset($result->nonexistent));
+    Assert::true(empty($result->nonexistent));
+  }
 }
 
 (new ResultTest())->run();
