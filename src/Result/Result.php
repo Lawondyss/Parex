@@ -12,8 +12,8 @@ abstract class Result
   }
 
 
-  public function __isset(string $name): never
+  public function __isset(string $name): bool
   {
-    throw new ParexException("Getting an undefined option: {$name}");
+    return property_exists($this, $name) && isset($this->{$name});
   }
 }
