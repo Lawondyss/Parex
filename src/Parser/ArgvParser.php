@@ -13,8 +13,6 @@ use function str_contains;
 use function str_starts_with;
 use function substr;
 
-use const PHP_EOL;
-
 /**
  * Parser utilizing arguments from the array $_SERVER['argv'].
  * A known limitation is that it fails for merged flags (-x -y -z => -xyz); however, this is a parsing issue.
@@ -27,12 +25,16 @@ class ArgvParser extends ParexParser
    */
   protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
-    $input = $_SERVER['argv'];
+    $input = $_SERVER['argv'] ?? [];
 
-    // first is always the script name
-    array_shift($input);
+    if (is_array($input)) {
+      // first is always the script name
+      array_shift($input);
 
-    return $input;
+      return $input;
+    }
+
+    return [];
   }
 
 
@@ -49,15 +51,23 @@ class ArgvParser extends ParexParser
     for ($i = 0; $i < $count; $i++) {
       $arg = $arguments[$i];
 
-      if ($arg[0] !== '-') {
+      if (!is_string($arg) || $arg === '' || $arg[0] !== '-') {
         continue;
       }
 
-      if (in_array($arg, ["--{$option->name}", "-{$option->short}"])) {
-        $usedIndexes[] = $i;
-        $values[] = $arguments[++$i];
+      $targets = ["--{$option->name}"];
+
+      if ($option->short !== null) {
+        $targets[] = "-{$option->short}";
+      }
+
+      if (in_array($arg, $targets, true)) {
         $usedIndexes[] = $i;
 
+        if (isset($arguments[$i + 1]) && is_string($arguments[$i + 1]) && !str_starts_with($arguments[$i + 1], '-')) {
+          $values[] = $arguments[++$i];
+          $usedIndexes[] = $i;
+        }
 
       } elseif (str_starts_with($arg, "--{$option->name}=")) {
         $usedIndexes[] = $i;
@@ -74,8 +84,9 @@ class ArgvParser extends ParexParser
     // remove used arguments
     foreach ($usedIndexes as $i) {
       unset($arguments[$i]);
-      $arguments = array_values($arguments);
     }
+
+    $arguments = array_values($arguments);
 
 
     return $option->asArray
@@ -86,10 +97,8 @@ class ArgvParser extends ParexParser
 
   protected function containsFlag(Option $option, array &$arguments): bool
   {
-    $short = $option->short ?? PHP_EOL;
-
     $byName = array_search("--{$option->name}", $arguments, strict: true);
-    $byShort = array_search("-{$short}", $arguments, strict: true);
+    $byShort = $option->short !== null ? array_search("-{$option->short}", $arguments, strict: true) : false;
 
     // remove used arguments
     if (is_int($byName)) {
@@ -99,6 +108,8 @@ class ArgvParser extends ParexParser
     if (is_int($byShort)) {
       unset($arguments[$byShort]);
     }
+
+    $arguments = array_values($arguments);
 
     return is_int($byName) || is_int($byShort);
   }
