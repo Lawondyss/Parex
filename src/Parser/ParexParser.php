@@ -45,7 +45,7 @@ abstract class ParexParser implements Parser
    * @param Option[] $requires
    * @param Option[] $optionals
    * @param Option[] $flags
-   * @return array<array-key, mixed>
+   * @return array<string, mixed>
    * @throws ParexException
    */
   public function parse(array $requires, array $optionals, array $flags): array
@@ -53,11 +53,6 @@ abstract class ParexParser implements Parser
     $missing = [];
     $output = [];
     $arguments = $this->fetchArguments($requires, $optionals, $flags);
-
-    // positional arguments
-    while (($arguments[0] ?? false) && is_string($arguments[0]) && $arguments[0] !== '' && $arguments[0][0] !== '-') {
-      $output[] = array_shift($arguments);
-    }
 
     foreach ($requires as $opt) {
       $value = $this->extractValue($opt, $arguments);
@@ -81,27 +76,34 @@ abstract class ParexParser implements Parser
       $output[$opt->name] = $this->containsFlag($opt, $arguments);
     }
 
-    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', array_map(static fn (mixed $v): string => is_scalar($v) || $v instanceof \Stringable ? (string) $v : '', $arguments)));
     $positional = [];
 
-    foreach ($arguments as $i => $arg) {
-      if (is_string($arg) && ($arg === '' || $arg[0] !== '-')) {
-        $positional[] = $arg;
-        unset($arguments[$i]);
+    if ($arguments !== []) {
+      foreach ($arguments as $i => $arg) {
+        if (is_string($arg) && ($arg === '' || $arg[0] !== '-')) {
+          $positional[] = $arg;
+          unset($arguments[$i]);
+        }
       }
+      $arguments = array_values($arguments);
     }
-    $arguments = array_values($arguments);
 
     $output['POSITIONAL'] = $positional;
 
-    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', array_map(static fn (mixed $v): string => is_scalar($v) || $v instanceof Stringable ? (string) $v : '', $arguments)));
+    if ($arguments !== []) {
+      $unknowns = array_map(
+        static fn (mixed $v): string => is_scalar($v) || $v instanceof Stringable ? (string) $v : '',
+        $arguments,
+      );
+      throw new ParexException('Unknown argument(s): ' . implode(', ', $unknowns));
+    }
 
     $oldNames = [];
 
     foreach ($output as $name => $value) {
       // For kebab-case key creates key with camelCase format for easier access
       // $result->kebabCaseName instead of $result->{"kebab-case-name"}
-      if (is_string($name) && str_contains($name, '-')) {
+      if (str_contains($name, '-')) {
         $oldNames[] = $oldName = $name;
         $camelName = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $oldName))));
 
