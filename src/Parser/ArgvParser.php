@@ -27,12 +27,16 @@ class ArgvParser extends ParexParser
    */
   protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
-    $input = $_SERVER['argv'];
+    $input = $_SERVER['argv'] ?? [];
 
-    // first is always the script name
-    array_shift($input);
+    if (is_array($input)) {
+      // first is always the script name
+      array_shift($input);
 
-    return $input;
+      return $input;
+    }
+
+    return [];
   }
 
 
@@ -49,14 +53,14 @@ class ArgvParser extends ParexParser
     for ($i = 0; $i < $count; $i++) {
       $arg = $arguments[$i];
 
-      if ($arg[0] !== '-') {
+      if (!is_string($arg) || $arg === '' || $arg[0] !== '-') {
         continue;
       }
 
-      if (in_array($arg, ["--{$option->name}", "-{$option->short}"])) {
+      if (in_array($arg, ["--{$option->name}", "-{$option->short}"], true)) {
         $usedIndexes[] = $i;
 
-        if (isset($arguments[$i + 1])) {
+        if (isset($arguments[$i + 1]) && is_string($arguments[$i + 1])) {
           $values[] = $arguments[++$i];
           $usedIndexes[] = $i;
         }

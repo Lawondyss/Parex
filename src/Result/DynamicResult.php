@@ -9,12 +9,12 @@ use function is_int;
 #[AllowDynamicProperties]
 class DynamicResult extends Result
 {
-  /** @var string[] $POSITIONAL */
+  /** @var array<array-key, mixed> $POSITIONAL */
   public array $POSITIONAL = [];
 
 
   /**
-   * @param array<array-key, string|string[]|null> $args
+   * @param mixed ...$args
    */
   public function __construct(...$args)
   {

@@ -75,6 +75,28 @@ class ArgvParserTest extends TestCase
       'Unknown argument(s): --unknown',
     );
   }
+
+
+  public function testArgvParserPositionalAndKebab(): void
+  {
+    $_SERVER['argv'] = [
+      'script.php',
+      'command',
+      'subcommand',
+      '-e',
+      'prod',
+      '--only-account=ACC123',
+    ];
+
+    $result = (new Parex(new ArgvParser()))
+      ->addRequire('env', 'e')
+      ->addOptional('only-account')
+      ->parse();
+
+    Assert::same(['command', 'subcommand'], $result->POSITIONAL);
+    Assert::same('prod', $result->env);
+    Assert::same('ACC123', $result->onlyAccount);
+  }
 }
 
 (new ArgvParserTest())->run();
