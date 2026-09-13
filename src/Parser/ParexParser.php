@@ -4,12 +4,15 @@ namespace Lawondyss\Parex\Parser;
 
 use Lawondyss\Parex\Option;
 use Lawondyss\Parex\ParexException;
+use Stringable;
 
 use function array_diff_key;
 use function array_flip;
-use function array_keys;
-use function array_shift;
+use function array_map;
+use function array_values;
 use function implode;
+use function is_scalar;
+use function is_string;
 use function lcfirst;
 use function str_contains;
 use function str_replace;
@@ -51,11 +54,6 @@ abstract class ParexParser implements Parser
     $output = [];
     $arguments = $this->fetchArguments($requires, $optionals, $flags);
 
-    // positional arguments
-    while (($arguments[0] ?? false) && $arguments[0][0] !== '-') {
-      $output[] = array_shift($arguments);
-    }
-
     foreach ($requires as $opt) {
       $value = $this->extractValue($opt, $arguments);
 
@@ -78,7 +76,27 @@ abstract class ParexParser implements Parser
       $output[$opt->name] = $this->containsFlag($opt, $arguments);
     }
 
-    $arguments !== [] && throw new ParexException('Unknown argument(s): ' . implode(', ', $arguments));
+    $positional = [];
+
+    if ($arguments !== []) {
+      foreach ($arguments as $i => $arg) {
+        if (is_string($arg) && ($arg === '' || $arg[0] !== '-')) {
+          $positional[] = $arg;
+          unset($arguments[$i]);
+        }
+      }
+      $arguments = array_values($arguments);
+    }
+
+    $output['POSITIONAL'] = $positional;
+
+    if ($arguments !== []) {
+      $unknowns = array_map(
+        static fn (mixed $v): string => is_scalar($v) || $v instanceof Stringable ? (string) $v : '',
+        $arguments,
+      );
+      throw new ParexException('Unknown argument(s): ' . implode(', ', $unknowns));
+    }
 
     $oldNames = [];
 
@@ -87,8 +105,12 @@ abstract class ParexParser implements Parser
       // $result->kebabCaseName instead of $result->{"kebab-case-name"}
       if (str_contains($name, '-')) {
         $oldNames[] = $oldName = $name;
-        $name = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $oldName))));
-        $output[$name] = $output[$oldName];
+        $camelName = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $oldName))));
+
+        if ($camelName !== $oldName && array_key_exists($camelName, $output)) {
+          throw new ParexException("Option name collision for '{$camelName}'");
+        }
+        $output[$camelName] = $output[$oldName];
       }
     }
 

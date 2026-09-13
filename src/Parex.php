@@ -6,6 +6,7 @@ use Lawondyss\Parex\Parser\GetOptParser;
 use Lawondyss\Parex\Parser\Parser;
 use Lawondyss\Parex\Result\DynamicResult;
 use Lawondyss\Parex\Result\Result;
+use ReflectionClass;
 
 class Parex
 {
@@ -72,6 +73,36 @@ class Parex
   public function parse(string $resultClass = DynamicResult::class): Result
   {
     $output = $this->parser->parse($this->requires, $this->optionals, $this->flags);
+
+    // Map or remove 'POSITIONAL' arguments according to constructor parameter expectations
+    if (isset($output['POSITIONAL'])) {
+      $ref = new ReflectionClass($resultClass);
+      $constructor = $ref->getConstructor();
+
+      if ($constructor !== null) {
+        $hasVariadic = false;
+        $positionalParamName = null;
+
+        foreach ($constructor->getParameters() as $param) {
+          if ($param->isVariadic()) {
+            $hasVariadic = true;
+          }
+
+          if (strtolower($param->getName()) === 'positional') {
+            $positionalParamName = $param->getName();
+          }
+        }
+
+        if ($positionalParamName !== null) {
+          if ($positionalParamName !== 'POSITIONAL') {
+            $output[$positionalParamName] = $output['POSITIONAL'];
+            unset($output['POSITIONAL']);
+          }
+        } elseif (!$hasVariadic) {
+          unset($output['POSITIONAL']);
+        }
+      }
+    }
 
     // values are bound by name to properties because $output is an associative array
     return new $resultClass(...$output);
