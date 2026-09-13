@@ -23,7 +23,7 @@ class GetOptParser extends ParexParser
    * @param Option[] $requires
    * @param Option[] $optionals
    * @param Option[] $flags
-   * @return array<array-key, string|string[]>
+   * @return array<array-key, mixed>
    */
   protected function fetchArguments(array $requires, array $optionals, array $flags): array
   {
@@ -52,7 +52,10 @@ class GetOptParser extends ParexParser
       $append($param, suffix: '');
     }
 
-    return getopt($shortOptions, $longOptions);
+    $restIndex = null;
+    $opts = getopt($shortOptions, $longOptions, $restIndex);
+
+    return $opts !== false ? $opts : [];
   }
 
 
@@ -62,14 +65,17 @@ class GetOptParser extends ParexParser
   protected function extractValue(Option $option, array &$arguments): mixed
   {
     // if both variants occur, they must be merged
-    $value = isset($arguments[$option->name], $arguments[$option->short])
+    $value = isset($arguments[$option->name], $option->short, $arguments[$option->short])
       ? array_merge((array)$arguments[$option->name], (array)$arguments[$option->short])
-      : ($arguments[$option->name] ?? $arguments[$option->short] ?? $option->default);
+      : ($arguments[$option->name] ?? $arguments[$option->short ?? ''] ?? $option->default);
 
     // remove used arguments
-    unset($arguments[$option->name], $arguments[$option->short]);
+    unset($arguments[$option->name], $arguments[$option->short ?? '']);
 
-    is_array($value) && $value = array_unique($value);
+    if (is_array($value)) {
+      /** @var array<string|int, string> $value */
+      $value = array_values(array_unique(array_map(static fn (mixed $v): string => is_scalar($v) || $v instanceof \Stringable ? (string) $v : '', $value)));
+    }
 
     // type of value by Option
     return match (true) {
@@ -82,8 +88,8 @@ class GetOptParser extends ParexParser
 
   protected function containsFlag(Option $option, array &$arguments): bool
   {
-    $contains = isset($arguments[$option->name]) || isset($arguments[$option->short]);
-    unset($arguments[$option->name], $arguments[$option->short]);
+    $contains = isset($arguments[$option->name]) || isset($option->short, $arguments[$option->short]);
+    unset($arguments[$option->name], $arguments[$option->short ?? '']);
 
     return $contains;
   }
